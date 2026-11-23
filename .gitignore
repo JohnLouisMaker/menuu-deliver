@@ -1,0 +1,15 @@
+# Ambientes e segredos locais
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Dependências e artefatos de build
+node_modules/
+dist/
+build/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log

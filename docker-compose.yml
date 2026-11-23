@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./deliver-backend
+    container_name: deliver-backend
+    env_file:
+      - ./deliver-backend/.env
+    environment:
+      ENV: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./deliver-backend:/app
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+
+  frontend:
+    build:
+      context: ./deliver-frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: deliver-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
