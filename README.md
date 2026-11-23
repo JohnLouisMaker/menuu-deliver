@@ -119,10 +119,31 @@ src/
 └── main.tsx      # Ponto de entrada
 ```
 
+## Fluxo de branches
+
+O projeto usa três branches de longa duração: `main` (produção), `test`
+(homologação) e `dev` (integração). Tarefas saem de `dev` em branches curtas
+(`feature/*`, `fix/*`, `refactor/*`, `chore/*`) e sobem por Pull Request:
+`dev → test → main`.
+
+```
+feature/*  fix/*  refactor/*  chore/*
+        \      |      |      /
+                 dev
+                  │  PR + QA
+                test
+                  │  PR + release
+                main
+```
+
+Detalhes do fluxo, convenções de commit e checklist de PR estão em
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## CI
 
-GitHub Actions roda **lint + build** em todo push para `main`, `feat/**`,
-`fix/**` e `refactor/**`, e em pull requests para `main`.
+GitHub Actions roda **lint + build** em todo push para `main`, `test`, `dev`,
+`feature/**`, `feat/**` (legado), `fix/**`, `hotfix/**`, `refactor/**` e
+`chore/**`, e em pull requests para `main`, `test` e `dev`.
 
 ## Roadmap
 
