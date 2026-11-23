@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 
 import api from "../api/api";
 import SiteFooter from "../components/footer/SiteFooter";
@@ -315,7 +316,6 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [activeSection, setActiveSection] = useState("perfil");
 
   useEffect(() => {
     document.body.style.overflow = "auto";
@@ -323,18 +323,6 @@ export default function EditProfilePage() {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
   }, []);
-
-  useEffect(() => {
-    const section = location.hash.replace("#", "");
-    if (!section) return;
-    const frame = requestAnimationFrame(() => {
-      setActiveSection(section);
-      document
-        .getElementById(section)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [location.hash]);
 
   useEffect(() => {
     let active = true;
@@ -408,11 +396,8 @@ export default function EditProfilePage() {
     navigate(ROTAS.login, { replace: true });
   }
 
-  function scrollToSection(sectionId: string) {
-    setActiveSection(sectionId);
-    document
-      .getElementById(sectionId)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function openSection(sectionId: string) {
+    navigate({ pathname: ROTAS.perfil, hash: sectionId }, { replace: true });
   }
 
   const activeNotifications = notificationOptions.filter(
@@ -428,6 +413,10 @@ export default function EditProfilePage() {
     { label: "Aparência", id: "aparencia", icon: Palette },
     { label: "Notificações", id: "notificacoes", icon: Bell },
   ];
+  const sectionParam = location.hash.replace("#", "");
+  const activeSection = navItems.some((item) => item.id === sectionParam)
+    ? sectionParam
+    : "perfil";
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
@@ -477,7 +466,7 @@ export default function EditProfilePage() {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => scrollToSection(id)}
+                      onClick={() => openSection(id)}
                       aria-current={isActive ? "page" : undefined}
                       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-colors ${isActive ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-orange-50 hover:text-orange-600"}`}
                     >
@@ -510,9 +499,17 @@ export default function EditProfilePage() {
               </div>
             </section>
           </aside>
-          <div className="min-w-0 space-y-5">
-            <section
-              id="perfil"
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="min-w-0 space-y-5"
+          >
+            {activeSection === "perfil" && (
+              <>
+                <section
+                  id="perfil"
               className="overflow-hidden rounded-2xl border border-orange-100 bg-gradient-to-r from-white via-white to-orange-50 p-5 shadow-sm sm:p-6"
             >
               <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
@@ -668,7 +665,10 @@ export default function EditProfilePage() {
                 </div>
               </form>
             </section>
+              </>
+            )}
 
+            {activeSection === "aparencia" && (
             <section id="aparencia" className={cardClass}>
               <div className="mb-5 flex items-start gap-3">
                 <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
@@ -711,7 +711,9 @@ export default function EditProfilePage() {
                 </p>
               </div>
             </section>
+            )}
 
+            {activeSection === "notificacoes" && (
             <section id="notificacoes" className={cardClass}>
               <div className="mb-5 flex items-start gap-3">
                 <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
@@ -756,7 +758,8 @@ export default function EditProfilePage() {
                 </button>
               </div>
             </section>
-          </div>
+            )}
+          </motion.div>
         </div>
       </main>
 
