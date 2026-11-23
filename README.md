@@ -121,25 +121,11 @@ src/
 └── main.tsx      # Ponto de entrada
 ```
 
-## Fluxo de branches
+## Branches
 
-O projeto usa três branches de longa duração: `main` (produção), `test`
-(homologação) e `dev` (integração). Tarefas saem de `dev` em branches curtas
-(`feature/*`, `fix/*`, `refactor/*`, `chore/*`) e sobem por Pull Request:
-`dev → test → main`.
-
-```
-feature/*  fix/*  refactor/*  chore/*
-        \      |      |      /
-                 dev
-                  │  PR + QA
-                test
-                  │  PR + release
-                main
-```
-
-Detalhes do fluxo, convenções de commit e checklist de PR estão em
-[CONTRIBUTING.md](CONTRIBUTING.md).
+`main` (produção) ← `test` (homologação) ← `dev` (integração) ← `feature/*`,
+`fix/*`, `refactor/*` e `chore/*`. Mudanças sobem por Pull Request; não commite
+direto em `main` ou `test`.
 
 ## CI
 
