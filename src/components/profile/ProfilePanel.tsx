@@ -4,6 +4,7 @@ interface ProfilePanelProps {
   user: { nome: string; email: string } | null;
   onClose: () => void;
   onEdit: () => void;
+  onSettings: () => void;
   onLogout: () => void;
 }
 
@@ -11,6 +12,7 @@ export default function ProfilePanel({
   user,
   onClose,
   onEdit,
+  onSettings,
   onLogout,
 }: ProfilePanelProps) {
   return (
@@ -50,8 +52,8 @@ export default function ProfilePanel({
         </button>
         <button
           type="button"
-          disabled
-          className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-500 opacity-75"
+          onClick={onSettings}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600"
         >
           <Settings className="h-4 w-4" />
           <span className="flex-1">Preferências</span>
