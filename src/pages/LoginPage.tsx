@@ -53,7 +53,7 @@ export default function LoginPage() {
 
     const form = e.currentTarget;
     const email = (form.querySelector('[name="email"]') as HTMLInputElement)
-      .value;
+      .value.trim();
     const password = (
       form.querySelector('[name="password"]') as HTMLInputElement
     ).value;
@@ -121,6 +121,9 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     required
+                    maxLength={254}
+                    autoComplete="email"
+                    autoCapitalize="none"
                     placeholder="seu@email.com"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}
@@ -139,7 +142,8 @@ export default function LoginPage() {
                     name="password"
                     type="password"
                     required
-                    minLength={8}
+                    maxLength={72}
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}

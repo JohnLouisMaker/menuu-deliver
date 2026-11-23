@@ -36,9 +36,9 @@ export default function SignUpPage() {
 
     const form = e.currentTarget;
     const nome = (form.querySelector('[name="nome"]') as HTMLInputElement)
-      .value;
+      .value.trim();
     const email = (form.querySelector('[name="email"]') as HTMLInputElement)
-      .value;
+      .value.trim();
     const password = (
       form.querySelector('[name="password"]') as HTMLInputElement
     ).value;
@@ -118,6 +118,8 @@ export default function SignUpPage() {
                     type="text"
                     required
                     minLength={3}
+                    maxLength={120}
+                    autoComplete="name"
                     placeholder="João Silva"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}
@@ -136,6 +138,9 @@ export default function SignUpPage() {
                     name="email"
                     type="email"
                     required
+                    maxLength={254}
+                    autoComplete="email"
+                    autoCapitalize="none"
                     placeholder="seu@email.com"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}
@@ -155,6 +160,8 @@ export default function SignUpPage() {
                     type="password"
                     required
                     minLength={8}
+                    maxLength={72}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}
@@ -174,6 +181,8 @@ export default function SignUpPage() {
                     type="password"
                     required
                     minLength={8}
+                    maxLength={72}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                     disabled={isLoading}

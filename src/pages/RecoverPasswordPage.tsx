@@ -23,6 +23,7 @@ export default function RecoverPasswordPage() {
   const [resetToken, setResetToken] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -32,7 +33,9 @@ export default function RecoverPasswordPage() {
     setError(null);
     setIsLoading(true);
     try {
-      const res = await api.post("/auth/forgot-password", { email });
+      const normalizedEmail = email.trim();
+      const res = await api.post("/auth/forgot-password", { email: normalizedEmail });
+      setEmail(normalizedEmail);
       setResetToken(res.data.reset_token);
       setStep(2);
     } catch (err) {
@@ -49,6 +52,10 @@ export default function RecoverPasswordPage() {
   async function handleVerifyCode(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (!/^\d{6}$/.test(code)) {
+      setError("Digite o código de 6 números enviado por e-mail.");
+      return;
+    }
     setIsLoading(true);
     try {
       await api.post("/auth/verify-reset-code", {
@@ -74,6 +81,14 @@ export default function RecoverPasswordPage() {
 
     if (newPassword.length < 8) {
       setError("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (newPassword.length > 72) {
+      setError("A senha deve ter no máximo 72 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("As senhas não coincidem.");
       return;
     }
 
@@ -146,6 +161,9 @@ export default function RecoverPasswordPage() {
                       name="email"
                       type="email"
                       required
+                      maxLength={254}
+                      autoComplete="email"
+                      autoCapitalize="none"
                       value={email}
                       onChange={(e) => setEmail(e.currentTarget.value)}
                       placeholder="seu@email.com"
@@ -205,6 +223,7 @@ export default function RecoverPasswordPage() {
                       inputMode="numeric"
                       pattern="[0-9]{6}"
                       maxLength={6}
+                      minLength={6}
                       value={code}
                       onChange={(e) => setCode(e.currentTarget.value)}
                       placeholder="000000"
@@ -271,8 +290,32 @@ export default function RecoverPasswordPage() {
                       type="password"
                       required
                       minLength={8}
+                      maxLength={72}
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.currentTarget.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                    Confirmar nova senha
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      minLength={8}
+                      maxLength={72}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.currentTarget.value)}
                       placeholder="••••••••"
                       className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white outline-none transition-all text-slate-700 focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                       disabled={isLoading}
