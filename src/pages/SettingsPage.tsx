@@ -4,33 +4,27 @@ import {
   Check,
   ChevronRight,
   Info,
-  KeyRound,
-  LogOut,
-  Mail,
   Megaphone,
   Moon,
   PackageCheck,
   Palette,
-  Pencil,
   ShieldCheck,
   Sparkles,
   Sun,
-  UserRound,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import SiteFooter from "../components/footer/SiteFooter";
 import { ROTAS } from "../routes/paths";
-import useAuthStore from "../store/authStore";
 import usePreferencesStore, {
   defaultNotifications,
   type NotificationPreferences,
 } from "../store/preferencesStore";
 import useThemeStore, { type Theme } from "../store/themeStore";
 
-type SectionId = "aparencia" | "notificacoes" | "conta";
+type SectionId = "aparencia" | "notificacoes";
 
 const cardClass =
   "rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6";
@@ -53,12 +47,6 @@ const sections: Array<{
     label: "Notificações",
     description: "O que você quer receber",
     icon: Bell,
-  },
-  {
-    id: "conta",
-    label: "Conta",
-    description: "Acesso e segurança",
-    icon: UserRound,
   },
 ];
 
@@ -237,32 +225,6 @@ function NotificationToggle({
   );
 }
 
-function AccountInfo({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Mail;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-      <div className="rounded-xl bg-white p-2 text-orange-600 shadow-sm">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-          {label}
-        </p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>("aparencia");
   const theme = useThemeStore((state) => state.theme);
@@ -272,9 +234,6 @@ export default function SettingsPage() {
   const resetNotifications = usePreferencesStore(
     (state) => state.resetNotifications,
   );
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
-  const navigate = useNavigate();
 
   const activeNotifications = notificationOptions.filter(
     (option) => notifications[option.key],
@@ -282,11 +241,6 @@ export default function SettingsPage() {
   const isDefaultNotifications = notificationOptions.every(
     (option) => notifications[option.key] === defaultNotifications[option.key],
   );
-
-  function handleLogout() {
-    logout();
-    navigate(ROTAS.login, { replace: true });
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
@@ -305,13 +259,13 @@ export default function SettingsPage() {
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-orange-600">
-              Minha conta
+              Preferências
             </p>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
               Configurações
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Ajuste a aparência, as notificações e o acesso à sua conta.
+              Ajuste a aparência e as notificações da sua conta.
             </p>
           </div>
           <Link
@@ -476,83 +430,6 @@ export default function SettingsPage() {
                 </>
               )}
 
-              {activeSection === "conta" && (
-                <>
-                  <div className="mb-5 flex items-start gap-3">
-                    <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
-                      <UserRound className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className={sectionTitleClass}>Conta</h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Seus dados de acesso e opções de segurança.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <AccountInfo
-                      icon={Mail}
-                      label="E-mail"
-                      value={user?.email || "Não informado"}
-                    />
-                    <AccountInfo
-                      icon={ShieldCheck}
-                      label="Situação da conta"
-                      value={user?.ativo ? "Ativa" : "Inativa"}
-                    />
-                  </div>
-
-                  <div className="mt-5 space-y-2">
-                    <Link
-                      to={ROTAS.editarPerfil}
-                      className="flex items-center gap-3 rounded-2xl border border-slate-100 px-4 py-3.5 text-left transition hover:border-orange-300 hover:bg-orange-50"
-                    >
-                      <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
-                        <Pencil className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-slate-700">
-                          Editar perfil
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          Altere seu nome e e-mail.
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
-                    </Link>
-
-                    <Link
-                      to={ROTAS.recuperarSenha}
-                      className="flex items-center gap-3 rounded-2xl border border-slate-100 px-4 py-3.5 text-left transition hover:border-orange-300 hover:bg-orange-50"
-                    >
-                      <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
-                        <KeyRound className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-slate-700">
-                          Alterar senha
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          Enviaremos um código de verificação por e-mail.
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
-                    </Link>
-                  </div>
-
-                  <div className="mt-5 border-t border-slate-100 pt-4">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 dark:border dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sair da conta
-                    </button>
-                  </div>
-                </>
-              )}
             </motion.section>
           </div>
         </div>
