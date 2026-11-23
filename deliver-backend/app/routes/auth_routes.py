@@ -1,0 +1,354 @@
+import hashlib
+import hmac
+import logging
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+from jose import jwt
+from sqlalchemy.orm import Session
+
+from app.core.config import (
+    ACCESS_TOKEN_EXPIRE,
+    ALGORITHM,
+    EMAIL_FROM,
+    EMAIL_HOST,
+    EMAIL_PASSWORD,
+    EMAIL_PORT,
+    EMAIL_USER,
+    REFRESH_TOKEN_EXPIRE,
+    SECRET_KEY,
+)
+from app.dependencies import get_current_user, make_session, verify_token
+from app.models.models import UserModel
+from app.schemas.schemas import (
+    ForgetPasswordSchema,
+    LoginSchema,
+    ResetPasswordSchema,
+    UserSignUpSchema,
+    UserUpdateSchema,
+    VerifyResetCodeSchema,
+)
+from app.security import bcrypt_context
+
+mail_config = ConnectionConfig(
+    MAIL_USERNAME=EMAIL_USER,
+    MAIL_PASSWORD=EMAIL_PASSWORD,
+    MAIL_FROM=EMAIL_FROM,
+    MAIL_PORT=int(EMAIL_PORT),
+    MAIL_SERVER=EMAIL_HOST,
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True,
+)
+auth_router = APIRouter(prefix="/auth", tags=["Autenticação"])
+logger = logging.getLogger(__name__)
+
+
+# CRIAÇÃO DE TOKEN
+def create_token(id: int, token_type: str, duration: timedelta):
+    expire = datetime.now(timezone.utc) + duration
+    payload = {
+        "sub": str(id),
+        "type": token_type,
+        "exp": expire,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+# GERAÇÃO DE TOKENS DE AUTENTICAÇÃO (ACCESS E REFRESH)
+def generate_auth_tokens(user_id: int):
+    access_token = create_token(
+        user_id,
+        token_type="access",
+        duration=timedelta(minutes=ACCESS_TOKEN_EXPIRE),
+    )
+    refresh_token = create_token(
+        user_id,
+        token_type="refresh",
+        duration=timedelta(days=REFRESH_TOKEN_EXPIRE),
+    )
+    return access_token, refresh_token
+
+
+# AUTENTICAÇÃO
+def authenticate(username: str, password: str, db: Session):
+    user = db.query(UserModel).filter(UserModel.email == username).first()
+    if not user:
+        return None
+    if not bcrypt_context.verify(password, user.senha):
+        return None
+    if not user.ativo:
+        return None
+
+    return user
+
+
+# FUNÇÃO PARA ENVIAR EMAIL COM CÓDIGO DE RECUPERAÇÃO
+async def send_reset_code_email(destinatario: str, codigo: str):
+    mensagem = MessageSchema(
+        subject="Código de recuperação de senha",
+        recipients=[destinatario],
+        body=f"Seu código de recuperação é: {codigo}\nEle expira em 15 minutos.",
+        subtype=MessageType.plain,
+    )
+
+    fm = FastMail(mail_config)
+    try:
+        await fm.send_message(mensagem)
+        print(f"E-mail enviado com sucesso para: {destinatario}")
+    except Exception as e:
+        print(f"Erro ao disparar e-mail de recuperação: {e}")
+
+
+async def send_reset_code_email_safe(destinatario: str, codigo: str):
+    try:
+        await send_reset_code_email(destinatario, codigo)
+    except Exception:
+        logger.exception("Falha ao enviar código de recuperação para %s", destinatario)
+
+
+# FUNÇÃO PARA HASH DO CÓDIGO (SHA-256)
+def hash_code(codigo: str) -> str:
+    return hashlib.sha256(codigo.encode()).hexdigest()
+
+
+# --- ROTAS
+# LOGIN
+@auth_router.post("/login")
+async def login(schema: LoginSchema, db: Session = Depends(make_session)):
+    user = authenticate(str(schema.email).lower(), schema.senha, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+    access_token, refresh_token = generate_auth_tokens(user.id)
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "Bearer",
+        "nome": user.nome,
+    }
+
+
+# LOGIN VIA FORM
+@auth_router.post("/loginform")
+async def loginform(schema: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(make_session)):
+    user = authenticate(schema.username.strip().lower(), schema.password, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+    access_token, refresh_token = generate_auth_tokens(user.id)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "Bearer",
+    }
+
+
+# CADASTRO
+@auth_router.post("/signup")
+async def register(schema: UserSignUpSchema, db: Session = Depends(make_session)):
+    email = str(schema.email).lower()
+    existing_user = db.query(UserModel).filter(UserModel.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email já cadastrado.")
+
+    hashed_password = bcrypt_context.hash(schema.senha)
+    new_user = UserModel(nome=schema.nome, email=email, senha=hashed_password, ativo=True, admin=False)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    access_token, refresh_token = generate_auth_tokens(new_user.id)
+    return {
+        "message": f"Cadastro realizado com sucesso! Bem-vindo {new_user.nome}",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "Bearer",
+    }
+
+
+# INICIO DO FLUXO DE RECUPERAÇÃO DE SENHA
+@auth_router.post("/forgot-password")
+@auth_router.post("/forgot_password", include_in_schema=False)
+async def forgotpassword(
+    schema: ForgetPasswordSchema,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(make_session),
+):
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Email informado não está cadastrado")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    if user.reset_code_expires_at and user.reset_code_expires_at > (now + timedelta(minutes=14)):
+        raise HTTPException(
+            status_code=429,
+            detail="Aguarde 1 minuto antes de solicitar outro código.",
+        )
+
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    user.reset_code_hash = hash_code(codigo)
+    user.reset_code_expires_at = now + timedelta(minutes=15)
+    user.reset_code_attempts = 0
+
+    background_tasks.add_task(send_reset_code_email_safe, user.email, codigo)
+
+    reset_token = create_token(id=user.id, token_type="reset", duration=timedelta(minutes=15))
+
+    db.commit()
+    return {
+        "message": "Um código foi enviado para seu email",
+        "reset_token": reset_token,
+    }
+
+
+# VALIDAÇÃO DO CÓDIGO DE RECUPERAÇÃO
+@auth_router.post("/verify-reset-code")
+async def verify_reset_code(schema: VerifyResetCodeSchema, db: Session = Depends(make_session)):
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    try:
+        payload = jwt.decode(schema.reset_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "reset":
+            raise HTTPException(status_code=400, detail="Token inválido para redefinição.")
+        if payload.get("sub") != str(user.id):
+            raise HTTPException(status_code=400, detail="Token não corresponde a este usuário.")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Token de redefinição expirado.")
+    except jwt.JWTError:
+        raise HTTPException(status_code=400, detail="Token de redefinição inválido.")
+
+    if not user.reset_code_hash or not user.reset_code_expires_at:
+        raise HTTPException(status_code=400, detail="Nenhum código de recuperação ativo.")
+    if user.reset_code_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(status_code=400, detail="Código de recuperação expirado.")
+    if (user.reset_code_attempts or 0) >= 5:
+        raise HTTPException(status_code=429, detail="Muitas tentativas. Solicite um novo código.")
+    if not hmac.compare_digest(user.reset_code_hash, hash_code(schema.code)):
+        user.reset_code_attempts = (user.reset_code_attempts or 0) + 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="Código de recuperação inválido.")
+
+    return {"message": "Código verificado com sucesso."}
+
+
+# ALTERA A SENHA DO USUÁRIO
+@auth_router.post("/reset-password")
+async def reset_password(schema: ResetPasswordSchema, db: Session = Depends(make_session)):
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    try:
+        payload = jwt.decode(schema.reset_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "reset":
+            raise HTTPException(status_code=400, detail="Token inválido para redefinição.")
+        if payload.get("sub") != str(user.id):
+            raise HTTPException(status_code=400, detail="Token não corresponde a este usuário.")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Token de redefinição expirado.")
+    except jwt.JWTError:
+        raise HTTPException(status_code=400, detail="Token de redefinição inválido.")
+
+    if not user.reset_code_hash or not user.reset_code_expires_at:
+        raise HTTPException(status_code=400, detail="Nenhum código de recuperação ativo.")
+
+    if user.reset_code_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(status_code=400, detail="Código de recuperação expirado.")
+
+    if user.reset_code_attempts >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas. Solicite um novo código.",
+        )
+
+    if not hmac.compare_digest(user.reset_code_hash, hash_code(schema.code)):
+        user.reset_code_attempts = (user.reset_code_attempts or 0) + 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="Código de recuperação inválido.")
+
+    user.senha = bcrypt_context.hash(schema.new_password)
+    user.reset_code_hash = None
+    user.reset_code_expires_at = None
+    user.reset_code_attempts = 0
+    db.commit()
+
+    return {"message": "Senha redefinida com sucesso!"}
+
+
+# REFRESH TOKEN
+@auth_router.post("/refresh")
+async def refresh_token(data: dict = Depends(verify_token), db: Session = Depends(make_session)):
+
+    token_type = data.get("type")
+
+    if not token_type == "refresh":
+        raise HTTPException(status_code=401, detail="Token de refresh exigido.")
+
+    try:
+        user_id = int(data["sub"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido.")
+
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado.")
+
+    access_token, refresh_token = generate_auth_tokens(user.id)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "Bearer",
+        "nome": user.nome,
+    }
+
+
+# MEUS DADOS
+@auth_router.get("/me")
+async def me(user: UserModel = Depends(get_current_user)):
+    return {
+        "id": user.id,
+        "nome": user.nome,
+        "email": user.email,
+        "admin": user.admin,
+        "ativo": user.ativo,
+    }
+
+
+# ATUALIZAÇÃO DE DADOS DO USUÁRIO
+@auth_router.patch("/me")
+async def update_me(
+    schema: UserUpdateSchema,
+    user: UserModel = Depends(get_current_user),
+    db: Session = Depends(make_session),
+):
+    if schema.email is not None:
+        email_existente = db.query(UserModel).filter(UserModel.email == schema.email, UserModel.id != user.id).first()
+
+        if email_existente:
+            raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
+
+        user.email = schema.email
+
+    if schema.nome is not None:
+        user.nome = schema.nome
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "id": user.id,
+        "nome": user.nome,
+        "email": user.email,
+        "admin": user.admin,
+        "ativo": user.ativo,
+    }
