@@ -157,6 +157,11 @@ no Railway/Docker.
 | `POST` | `/auth/verify-reset-code` | Valida o código recebido                                      | —             |
 | `POST` | `/auth/reset-password`    | Define nova senha com o código                                | —             |
 
+No cadastro, o nome deve ter entre 3 e 120 caracteres, o e-mail deve ser
+válido e a senha deve ter entre 8 e 72 caracteres. Login e recuperação validam
+o formato do e-mail; a redefinição também exige o código numérico de 6 dígitos
+e uma senha entre 8 e 72 caracteres. Essas regras são aplicadas no servidor.
+
 Rotas protegidas esperam `Authorization: Bearer <access_token>`. Quando o
 access token expira, a API responde `401` e o cliente renova em
 `POST /auth/refresh`, também via header.

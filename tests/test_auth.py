@@ -48,6 +48,42 @@ def test_login_senha_invalida():
     assert response.json()["detail"] == "Credenciais inválidas"
 
 
+def test_signup_rejeita_email_invalido():
+    response = client.post(
+        "/auth/signup",
+        json={"nome": "QA Tester", "email": "email-invalido", "senha": "Senha@123"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_signup_rejeita_senha_curta():
+    response = client.post(
+        "/auth/signup",
+        json={"nome": "QA Tester", "email": f"qa_{uuid4().hex}@exemplo.com", "senha": "curta"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_signup_rejeita_senha_acima_do_limite_bcrypt():
+    response = client.post(
+        "/auth/signup",
+        json={"nome": "QA Tester", "email": f"qa_{uuid4().hex}@exemplo.com", "senha": "a" * 73},
+    )
+
+    assert response.status_code == 422
+
+
+def test_verify_reset_code_rejeita_codigo_malformado():
+    response = client.post(
+        "/auth/verify-reset-code",
+        json={"email": "qa@exemplo.com", "code": "123", "reset_token": "token"},
+    )
+
+    assert response.status_code == 422
+
+
 def test_loginform_senha_invalida():
     response = client.post(
         "/auth/loginform",

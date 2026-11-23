@@ -1,6 +1,7 @@
 import hashlib
+import hmac
 import logging
-import random
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -119,7 +120,7 @@ def hash_code(codigo: str) -> str:
 # LOGIN
 @auth_router.post("/login")
 async def login(schema: LoginSchema, db: Session = Depends(make_session)):
-    user = authenticate(schema.email, schema.senha, db)
+    user = authenticate(str(schema.email).lower(), schema.senha, db)
     if not user:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
@@ -135,7 +136,7 @@ async def login(schema: LoginSchema, db: Session = Depends(make_session)):
 # LOGIN VIA FORM
 @auth_router.post("/loginform")
 async def loginform(schema: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(make_session)):
-    user = authenticate(schema.username, schema.password, db)
+    user = authenticate(schema.username.strip().lower(), schema.password, db)
     if not user:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
@@ -151,12 +152,13 @@ async def loginform(schema: OAuth2PasswordRequestForm = Depends(), db: Session =
 # CADASTRO
 @auth_router.post("/signup")
 async def register(schema: UserSignUpSchema, db: Session = Depends(make_session)):
-    existing_user = db.query(UserModel).filter(UserModel.email == schema.email).first()
+    email = str(schema.email).lower()
+    existing_user = db.query(UserModel).filter(UserModel.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email já cadastrado.")
 
     hashed_password = bcrypt_context.hash(schema.senha)
-    new_user = UserModel(nome=schema.nome, email=schema.email, senha=hashed_password, ativo=True, admin=False)
+    new_user = UserModel(nome=schema.nome, email=email, senha=hashed_password, ativo=True, admin=False)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -178,7 +180,7 @@ async def forgotpassword(
     background_tasks: BackgroundTasks,
     db: Session = Depends(make_session),
 ):
-    user = db.query(UserModel).filter(UserModel.email == schema.email).first()
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
     if not user:
         raise HTTPException(status_code=404, detail="Email informado não está cadastrado")
 
@@ -190,7 +192,7 @@ async def forgotpassword(
             detail="Aguarde 1 minuto antes de solicitar outro código.",
         )
 
-    codigo = f"{random.randint(0, 999999):06d}"
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
     user.reset_code_hash = hash_code(codigo)
     user.reset_code_expires_at = now + timedelta(minutes=15)
     user.reset_code_attempts = 0
@@ -209,7 +211,7 @@ async def forgotpassword(
 # VALIDAÇÃO DO CÓDIGO DE RECUPERAÇÃO
 @auth_router.post("/verify-reset-code")
 async def verify_reset_code(schema: VerifyResetCodeSchema, db: Session = Depends(make_session)):
-    user = db.query(UserModel).filter(UserModel.email == schema.email).first()
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
@@ -230,7 +232,7 @@ async def verify_reset_code(schema: VerifyResetCodeSchema, db: Session = Depends
         raise HTTPException(status_code=400, detail="Código de recuperação expirado.")
     if (user.reset_code_attempts or 0) >= 5:
         raise HTTPException(status_code=429, detail="Muitas tentativas. Solicite um novo código.")
-    if user.reset_code_hash != hash_code(schema.code):
+    if not hmac.compare_digest(user.reset_code_hash, hash_code(schema.code)):
         user.reset_code_attempts = (user.reset_code_attempts or 0) + 1
         db.commit()
         raise HTTPException(status_code=400, detail="Código de recuperação inválido.")
@@ -241,7 +243,7 @@ async def verify_reset_code(schema: VerifyResetCodeSchema, db: Session = Depends
 # ALTERA A SENHA DO USUÁRIO
 @auth_router.post("/reset-password")
 async def reset_password(schema: ResetPasswordSchema, db: Session = Depends(make_session)):
-    user = db.query(UserModel).filter(UserModel.email == schema.email).first()
+    user = db.query(UserModel).filter(UserModel.email == str(schema.email).lower()).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
@@ -268,7 +270,7 @@ async def reset_password(schema: ResetPasswordSchema, db: Session = Depends(make
             detail="Muitas tentativas. Solicite um novo código.",
         )
 
-    if user.reset_code_hash != hash_code(schema.code):
+    if not hmac.compare_digest(user.reset_code_hash, hash_code(schema.code)):
         user.reset_code_attempts = (user.reset_code_attempts or 0) + 1
         db.commit()
         raise HTTPException(status_code=400, detail="Código de recuperação inválido.")
