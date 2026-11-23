@@ -252,6 +252,10 @@ export default function HomePage() {
                         setModalUser(false);
                         navigate(ROTAS.editarPerfil);
                       }}
+                      onSettings={() => {
+                        setModalUser(false);
+                        navigate(ROTAS.configuracoes);
+                      }}
                       onLogout={encerrarSessao}
                     />
                   </motion.div>
@@ -289,6 +293,10 @@ export default function HomePage() {
                 onEdit={() => {
                   setModalUser(false);
                   navigate(ROTAS.editarPerfil);
+                }}
+                onSettings={() => {
+                  setModalUser(false);
+                  navigate(ROTAS.configuracoes);
                 }}
                 onLogout={encerrarSessao}
               />

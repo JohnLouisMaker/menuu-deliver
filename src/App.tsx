@@ -6,6 +6,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import PedidoSucessoPage from "./pages/PedidoSucessoPage";
 import RecoverPasswordPage from "./pages/RecoverPasswordPage";
+import SettingsPage from "./pages/SettingsPage";
 import SignUpPage from "./pages/SignUpPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { ROTAS } from "./routes/paths";
@@ -77,6 +78,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <EditProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROTAS.configuracoes}
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

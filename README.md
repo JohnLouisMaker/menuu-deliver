@@ -9,9 +9,9 @@
 Interface de um aplicativo de delivery de comida: cardápio, carrinho e
 checkout, com autenticação JWT e consumo de uma API REST própria em FastAPI.
 
-**Status:** em desenvolvimento. Catálogo, carrinho, checkout, autenticação e
-edição de perfil estão funcionando; histórico de pedidos e detalhes do pedido
-estão no roadmap.
+**Status:** em desenvolvimento. Catálogo, carrinho, checkout, autenticação,
+edição de perfil e configurações estão funcionando; histórico de pedidos e
+detalhes do pedido estão no roadmap.
 
 **Backend:** [deliver-backend](https://github.com/JohnLouisMaker/deliver-backend)
 
@@ -32,6 +32,8 @@ estão no roadmap.
   automática via interceptor do Axios
 - **Rotas protegidas** — área logada acessível apenas com sessão válida
 - **Perfil** — edição dos dados do usuário (`PATCH /auth/me`)
+- **Configurações** — tema claro/escuro, preferências de notificação (salvas
+  no aparelho) e atalhos de conta
 
 ## Stack
 
@@ -110,7 +112,7 @@ src/
 ├── api/          # Cliente Axios + interceptors de auth/refresh
 ├── components/   # auth, cart, product, profile, footer
 ├── pages/        # Home, Login, SignUp, RecoverPassword, Checkout,
-│                 # PedidoSucesso, EditProfile
+│                 # PedidoSucesso, EditProfile, Settings
 ├── routes/       # ProtectedRoute e definição dos paths
 ├── schemas/      # Schemas de validação (Zod)
 ├── store/        # authStore e cartStore (Zustand)

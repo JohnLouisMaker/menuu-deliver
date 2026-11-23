@@ -6,4 +6,5 @@ export const ROTAS = {
   checkout: "/checkout",
   pedidoSucesso: "/pedido-sucesso",
   editarPerfil: "/perfil/editar",
+  configuracoes: "/configuracoes",
 } as const;
