@@ -1,24 +1,37 @@
 import { AxiosError } from "axios";
 import {
   ArrowLeft,
+  Bell,
+  Check,
   ChevronRight,
+  Info,
   LogOut,
   Mail,
+  Megaphone,
+  Moon,
   Package,
+  PackageCheck,
+  Palette,
   Pencil,
   Save,
-  Settings,
   ShieldCheck,
+  Sparkles,
+  Sun,
   UserRound,
   X,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import api from "../api/api";
 import SiteFooter from "../components/footer/SiteFooter";
 import { ROTAS } from "../routes/paths";
 import useAuthStore, { type User } from "../store/authStore";
+import usePreferencesStore, {
+  defaultNotifications,
+  type NotificationPreferences,
+} from "../store/preferencesStore";
+import useThemeStore, { type Theme } from "../store/themeStore";
 
 const cardClass =
   "rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6";
@@ -107,11 +120,194 @@ function FormField({
   );
 }
 
+const notificationOptions: Array<{
+  key: keyof NotificationPreferences;
+  title: string;
+  description: string;
+  icon: typeof Bell;
+}> = [
+  {
+    key: "statusPedido",
+    title: "Atualizações de pedidos",
+    description:
+      "Saiba quando seu pedido for confirmado, sair para entrega ou chegar.",
+    icon: PackageCheck,
+  },
+  {
+    key: "promocoes",
+    title: "Ofertas e promoções",
+    description: "Descontos, cupons e combos especiais dos seus favoritos.",
+    icon: Megaphone,
+  },
+  {
+    key: "novidades",
+    title: "Novidades da Menuu",
+    description: "Novos sabores, restaurantes e recursos adicionados ao app.",
+    icon: Sparkles,
+  },
+];
+
+function ThemeOption({
+  mode,
+  selected,
+  onSelect,
+}: {
+  mode: Theme;
+  selected: boolean;
+  onSelect: (theme: Theme) => void;
+}) {
+  const isLight = mode === "light";
+  const Icon = isLight ? Sun : Moon;
+
+  return (
+    <label
+      className={`relative block cursor-pointer rounded-2xl border p-3 transition ${
+        selected
+          ? "border-orange-500 shadow-sm shadow-orange-100"
+          : "border-slate-200 hover:border-orange-300"
+      }`}
+    >
+      <input
+        type="radio"
+        name="theme"
+        value={mode}
+        checked={selected}
+        onChange={() => onSelect(mode)}
+        className="peer sr-only"
+      />
+
+      <div
+        aria-hidden="true"
+        className="mb-3 rounded-xl p-2.5 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500"
+        style={{ backgroundColor: isLight ? "#eef2f7" : "#101216" }}
+      >
+        <div className="mb-2 flex items-center gap-1">
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: "#f97316" }}
+          />
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: isLight ? "#cbd5e1" : "#3a3f48" }}
+          />
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: isLight ? "#cbd5e1" : "#3a3f48" }}
+          />
+        </div>
+        <div
+          className="rounded-lg p-2.5"
+          style={{ backgroundColor: isLight ? "#ffffff" : "#1e2126" }}
+        >
+          <div
+            className="mb-1.5 h-1.5 w-12 rounded-full"
+            style={{ backgroundColor: isLight ? "#94a3b8" : "#5b636f" }}
+          />
+          <div
+            className="h-1.5 w-8 rounded-full"
+            style={{ backgroundColor: isLight ? "#cbd5e1" : "#3a3f48" }}
+          />
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <span
+              className="h-4 w-4 rounded"
+              style={{ backgroundColor: isLight ? "#fed7aa" : "#4a2c14" }}
+            />
+            <span
+              className="h-1.5 flex-1 rounded-full"
+              style={{ backgroundColor: isLight ? "#e2e8f0" : "#2e323a" }}
+            />
+            <span
+              className="h-3 w-6 rounded"
+              style={{ backgroundColor: "#f97316" }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Icon
+          className={`h-4 w-4 ${selected ? "text-orange-600" : "text-slate-400"}`}
+        />
+        <span className="text-sm font-bold text-slate-700">
+          {isLight ? "Tema claro" : "Tema escuro"}
+        </span>
+        <span
+          className={`ml-auto flex h-5 w-5 items-center justify-center rounded-full border ${
+            selected
+              ? "border-orange-600 bg-orange-600 text-white"
+              : "border-slate-300 text-transparent"
+          }`}
+        >
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        {isLight
+          ? "Leve e colorido, ideal para o dia a dia."
+          : "Menos brilho para pedir à noite."}
+      </p>
+    </label>
+  );
+}
+
+function NotificationToggle({
+  title,
+  description,
+  icon: Icon,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  icon: typeof Bell;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="rounded-xl bg-orange-50 p-2 text-orange-600">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-slate-700">{title}</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          {description}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
+        onClick={() => onChange(!checked)}
+        className={`relative mt-1 inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
+          checked ? "bg-orange-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 rounded-full shadow transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
+          style={{ backgroundColor: "#ffffff" }}
+        />
+      </button>
+    </div>
+  );
+}
+
 export default function EditProfilePage() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
+  const notifications = usePreferencesStore((state) => state.notifications);
+  const setNotification = usePreferencesStore((state) => state.setNotification);
+  const resetNotifications = usePreferencesStore(
+    (state) => state.resetNotifications,
+  );
   const [nome, setNome] = useState(user?.nome ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [pedidoCount, setPedidoCount] = useState<number | null>(null);
@@ -119,11 +315,26 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [activeSection, setActiveSection] = useState("perfil");
 
   useEffect(() => {
     document.body.style.overflow = "auto";
-    window.scrollTo({ top: 0, behavior: "auto" });
+    if (!window.location.hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }, []);
+
+  useEffect(() => {
+    const section = location.hash.replace("#", "");
+    if (!section) return;
+    const frame = requestAnimationFrame(() => {
+      setActiveSection(section);
+      document
+        .getElementById(section)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash]);
 
   useEffect(() => {
     let active = true;
@@ -198,13 +409,25 @@ export default function EditProfilePage() {
   }
 
   function scrollToSection(sectionId: string) {
+    setActiveSection(sectionId);
     document
       .getElementById(sectionId)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const activeNotifications = notificationOptions.filter(
+    (option) => notifications[option.key],
+  ).length;
+  const isDefaultNotifications = notificationOptions.every(
+    (option) => notifications[option.key] === defaultNotifications[option.key],
+  );
+
   const initials = nome.trim().charAt(0).toUpperCase();
-  const navItems = [{ label: "Meu perfil", id: "perfil", icon: UserRound }];
+  const navItems = [
+    { label: "Meu perfil", id: "perfil", icon: UserRound },
+    { label: "Aparência", id: "aparencia", icon: Palette },
+    { label: "Notificações", id: "notificacoes", icon: Bell },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
@@ -217,7 +440,7 @@ export default function EditProfilePage() {
             Início
           </Link>
           <ChevronRight className="h-4 w-4" />
-          <span className="font-semibold text-slate-700">Meu perfil</span>
+          <span className="font-semibold text-slate-700">Minha conta</span>
         </div>
 
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -226,10 +449,10 @@ export default function EditProfilePage() {
               Minha conta
             </p>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-              Meu perfil
+              Minha conta
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              Seus dados e preferências de entrega.
+              Perfil, aparência e notificações em um só lugar.
             </p>
           </div>
           <Link
@@ -248,28 +471,23 @@ export default function EditProfilePage() {
                 Minha conta
               </p>
               <nav className="space-y-1">
-                {navItems.map(({ label, id, icon: Icon }, index) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => scrollToSection(id)}
-                    aria-current={index === 0 ? "page" : undefined}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-colors ${index === 0 ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-orange-50 hover:text-orange-600"}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                    <ChevronRight className="ml-auto h-4 w-4" />
-                  </button>
-                ))}
+                {navItems.map(({ label, id, icon: Icon }) => {
+                  const isActive = activeSection === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => scrollToSection(id)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-colors ${isActive ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-orange-50 hover:text-orange-600"}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                      <ChevronRight className="ml-auto h-4 w-4" />
+                    </button>
+                  );
+                })}
               </nav>
-              <Link
-                to={ROTAS.configuracoes}
-                className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-600 transition-colors hover:bg-orange-50 hover:text-orange-600"
-              >
-                <Settings className="h-4 w-4" />
-                Configurações
-                <ChevronRight className="ml-auto h-4 w-4" />
-              </Link>
               <div className="mt-5 rounded-2xl bg-orange-50 p-4">
                 <div className="mb-2 flex items-center gap-2 text-orange-600">
                   <ShieldCheck className="h-5 w-5" />
@@ -449,6 +667,94 @@ export default function EditProfilePage() {
                   </div>
                 </div>
               </form>
+            </section>
+
+            <section id="aparencia" className={cardClass}>
+              <div className="mb-5 flex items-start gap-3">
+                <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
+                  <Palette className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-black">Aparência</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Escolha como a Menuu deve aparecer para você.
+                  </p>
+                </div>
+                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-[11px] font-bold text-emerald-700 sm:inline-flex">
+                  <Check className="h-3.5 w-3.5" />
+                  Aplicado
+                </span>
+              </div>
+
+              <div
+                className="grid gap-3 sm:grid-cols-2"
+                role="radiogroup"
+                aria-label="Tema da aplicação"
+              >
+                <ThemeOption
+                  mode="light"
+                  selected={theme === "light"}
+                  onSelect={setTheme}
+                />
+                <ThemeOption
+                  mode="dark"
+                  selected={theme === "dark"}
+                  onSelect={setTheme}
+                />
+              </div>
+
+              <div className="mt-5 flex items-start gap-2 rounded-2xl bg-slate-50 px-4 py-3">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <p className="text-xs leading-relaxed text-slate-500">
+                  O tema é aplicado imediatamente e também pode ser alterado
+                  pelo botão de sol/lua no topo do cardápio.
+                </p>
+              </div>
+            </section>
+
+            <section id="notificacoes" className={cardClass}>
+              <div className="mb-5 flex items-start gap-3">
+                <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-black">Notificações</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Escolha quais avisos fazem sentido para você.
+                  </p>
+                </div>
+                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-500 sm:inline-flex">
+                  {activeNotifications} de {notificationOptions.length} ativas
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {notificationOptions.map((option) => (
+                  <NotificationToggle
+                    key={option.key}
+                    title={option.title}
+                    description={option.description}
+                    icon={option.icon}
+                    checked={notifications[option.key]}
+                    onChange={(value) => setNotification(option.key, value)}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Info className="h-4 w-4 shrink-0" />
+                  Preferências salvas neste aparelho.
+                </p>
+                <button
+                  type="button"
+                  onClick={resetNotifications}
+                  disabled={isDefaultNotifications}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Restaurar padrões
+                </button>
+              </div>
             </section>
           </div>
         </div>

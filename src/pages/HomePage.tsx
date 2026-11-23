@@ -250,11 +250,11 @@ export default function HomePage() {
                       onClose={() => setModalUser(false)}
                       onEdit={() => {
                         setModalUser(false);
-                        navigate(ROTAS.editarPerfil);
+                        navigate(`${ROTAS.perfil}#perfil`);
                       }}
                       onSettings={() => {
                         setModalUser(false);
-                        navigate(ROTAS.configuracoes);
+                        navigate(`${ROTAS.perfil}#aparencia`);
                       }}
                       onLogout={encerrarSessao}
                     />
@@ -292,11 +292,11 @@ export default function HomePage() {
                 onClose={() => setModalUser(false)}
                 onEdit={() => {
                   setModalUser(false);
-                  navigate(ROTAS.editarPerfil);
+                  navigate(`${ROTAS.perfil}#perfil`);
                 }}
                 onSettings={() => {
                   setModalUser(false);
-                  navigate(ROTAS.configuracoes);
+                  navigate(`${ROTAS.perfil}#aparencia`);
                 }}
                 onLogout={encerrarSessao}
               />

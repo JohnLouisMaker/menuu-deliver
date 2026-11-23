@@ -5,6 +5,7 @@ export const ROTAS = {
   recuperarSenha: "/recover-password",
   checkout: "/checkout",
   pedidoSucesso: "/pedido-sucesso",
+  perfil: "/perfil",
   editarPerfil: "/perfil/editar",
   configuracoes: "/configuracoes",
 } as const;
