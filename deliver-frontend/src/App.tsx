@@ -1,0 +1,116 @@
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import CheckoutPage from "./pages/CheckoutPage";
+import EditProfilePage from "./pages/EditProfilePage";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import PedidoSucessoPage from "./pages/PedidoSucessoPage";
+import RecoverPasswordPage from "./pages/RecoverPasswordPage";
+import SignUpPage from "./pages/SignUpPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { ROTAS } from "./routes/paths";
+import useAuthStore from "./store/authStore";
+import useThemeStore from "./store/themeStore";
+
+export default function App() {
+  const { isLoading, initializeAuth } = useAuthStore();
+  const theme = useThemeStore((state) => state.theme);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-600 font-medium text-lg">
+            Validando acesso...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to={ROTAS.cardapio} replace />} />
+
+        {/* --- ROTAS PÚBLICAS --- */}
+        <Route path={ROTAS.login} element={<LoginPage />} />
+        <Route path={ROTAS.cadastro} element={<SignUpPage />} />
+        <Route path={ROTAS.recuperarSenha} element={<RecoverPasswordPage />} />
+
+        {/* --- ROTAS PROTEGIDAS --- */}
+        <Route
+          path={ROTAS.cardapio}
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROTAS.checkout}
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROTAS.pedidoSucesso}
+          element={
+            <ProtectedRoute>
+              <PedidoSucessoPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROTAS.perfil}
+          element={
+            <ProtectedRoute>
+              <EditProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROTAS.editarPerfil}
+          element={<Navigate to={ROTAS.perfil} replace />}
+        />
+        <Route
+          path={ROTAS.configuracoes}
+          element={
+            <Navigate to={`${ROTAS.perfil}#aparencia`} replace />
+          }
+        />
+
+        <Route
+          path="*"
+          element={
+            <div className="flex flex-col items-center justify-center h-screen bg-slate-50">
+              <h1 className="font-black text-orange-600 text-4xl sm:text-6xl mb-4">
+                404
+              </h1>
+              <p className="text-slate-600 text-xl font-bold mb-6">
+                OPS! PÁGINA NÃO ENCONTRADA
+              </p>
+              <button
+                onClick={() => window.history.back()}
+                className="bg-orange-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-700 transition-colors"
+              >
+                VOLTAR
+              </button>
+            </div>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}

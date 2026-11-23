@@ -1,0 +1,427 @@
+import { AxiosError } from "axios";
+import {
+  ArrowLeft,
+  Banknote,
+  Check,
+  CreditCard,
+  Landmark,
+  Loader2,
+  ShoppingBag,
+  Smartphone,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import api, {
+  type CheckoutResponse,
+  type CriarPedidoRequest,
+  type FormaPagamento,
+} from "../api/api";
+import { ROTAS } from "../routes/paths";
+import useCartStore, { selectCartSubtotal } from "../store/cartStore";
+import { precoNoCarrinho, ROTULOS_TAMANHO } from "../types/product";
+
+const formasPagamento: {
+  value: FormaPagamento;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: "DINHEIRO",
+    label: "Dinheiro",
+    icon: <Banknote className="w-5 h-5" />,
+  },
+  {
+    value: "CARTAO_CREDITO",
+    label: "Cartão de Crédito",
+    icon: <CreditCard className="w-5 h-5" />,
+  },
+  {
+    value: "CARTAO_DEBITO",
+    label: "Cartão de Débito",
+    icon: <Landmark className="w-5 h-5" />,
+  },
+  { value: "PIX", label: "Pix", icon: <Smartphone className="w-5 h-5" /> },
+  {
+    value: "VALE_ALIMENTACAO",
+    label: "Vale Alimentação",
+    icon: <ShoppingBag className="w-5 h-5" />,
+  },
+];
+
+/** Extrai mensagem legível de um erro da API (detail pode ser string ou lista do FastAPI). */
+function mensagemDeErro(err: unknown): string {
+  const detail = (err as AxiosError<{ detail?: unknown }>).response?.data
+    ?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const mensagens = detail
+      .map((item) =>
+        item && typeof item === "object" && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : String(item),
+      )
+      .filter((msg) => msg.trim());
+    if (mensagens.length > 0) return mensagens.join(" ");
+  }
+  return "Erro ao finalizar pedido. Tente novamente.";
+}
+
+export default function CheckoutPage() {
+  const navigate = useNavigate();
+  const { currentCart, clearCart } = useCartStore();
+  const total = useCartStore(selectCartSubtotal);
+
+  const [endereco, setEndereco] = useState("");
+  const [pagamento, setPagamento] = useState<FormaPagamento | "">("");
+  const [troco, setTroco] = useState("");
+  const [observacao, setObservacao] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (currentCart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+        <ShoppingBag className="w-16 h-16 text-slate-300 mb-4" />
+        <h2 className="text-xl font-black text-slate-700 mb-2">Pedido vazio</h2>
+        <p className="text-slate-500 mb-6">Adicione itens antes de finalizar</p>
+        <button
+          onClick={() => navigate(ROTAS.cardapio)}
+          className="bg-orange-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all"
+        >
+          Ver Cardápio
+        </button>
+      </div>
+    );
+  }
+
+  async function finalizarPedido(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const enderecoLimpo = endereco.trim();
+    const telefoneLimpo = telefone.trim().replace(/[^0-9]/g, "");
+
+    if (!enderecoLimpo) return setError("O endereço de entrega é obrigatório");
+    if (enderecoLimpo.length < 5)
+      return setError(
+        "Informe um endereço de entrega válido (mínimo 5 caracteres)",
+      );
+    if (enderecoLimpo.length > 100)
+      return setError(
+        "Informe um endereço de entrega válido (máximo 100 caracteres)",
+      );
+    if (!pagamento) return setError("Selecione uma forma de pagamento");
+    if (!telefoneLimpo) return setError("O telefone de contato é obrigatório");
+    if (telefoneLimpo.length < 10)
+      return setError(
+        "Complete o telefone de contato com DDD e número (mínimo 10 dígitos)",
+      );
+    if (telefoneLimpo.length > 11)
+      return setError(
+        "Digite um telefone de contato válido (máximo 11 dígitos, incluindo DDD)",
+      );
+
+    if (!formasPagamento.some((p) => p.value === pagamento))
+      return setError("Selecione uma forma de pagamento válida");
+
+    let trocoValor: number | undefined;
+    if (pagamento === "DINHEIRO") {
+      if (!troco.trim()) return setError("Informe o valor para troco");
+      trocoValor = Number(troco.replace(",", "."));
+      if (!Number.isFinite(trocoValor) || trocoValor < 0)
+        return setError("Informe um valor de troco válido");
+      if (trocoValor < total)
+        return setError(
+          "O valor de troco deve ser maior ou igual ao total do pedido",
+        );
+    }
+
+    setLoading(true);
+    try {
+      // Requisição única de checkout (contrato: POST /pedidos).
+      // Sem campo de preço no payload: caso de negócio já calculado no backend.
+      const corpo: CriarPedidoRequest = {
+        itens: currentCart.map((item) => ({
+          item_cardapio_id: item.product.id,
+          quantidade: item.quantity,
+          ...(item.tamanho ? { tamanho: item.tamanho } : {}),
+        })),
+        endereco_entrega: enderecoLimpo,
+        forma_pagamento: pagamento,
+        telefone_contato: telefoneLimpo,
+      };
+      if (pagamento === "DINHEIRO" && trocoValor !== undefined) {
+        corpo.troco_para = trocoValor;
+      }
+      if (observacao.trim()) {
+        corpo.observacao = observacao.trim();
+      }
+
+      const response = await api.post<CheckoutResponse>("/pedidos", corpo);
+      const pedidoId = response.data.pedido.id;
+
+      // Carrinho só é limpo após sucesso: em erro, os itens são preservados.
+      clearCart();
+      navigate(ROTAS.pedidoSucesso, { state: { pedidoId } });
+    } catch (err) {
+      setError(mensagemDeErro(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 22 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: "easeOut" }}
+      className="min-h-dvh bg-slate-50 lg:h-dvh lg:overflow-hidden"
+    >
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-6 h-[72px] flex items-center gap-3">
+          <button
+            onClick={() => navigate(ROTAS.cardapio)}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <h1 className="font-black text-lg uppercase">Checkout</h1>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4 lg:h-[calc(100dvh-72px)] lg:overflow-hidden">
+        <form
+          onSubmit={finalizarPedido}
+          className="space-y-4 lg:grid lg:h-full lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_auto_auto] lg:gap-x-6 lg:gap-y-3 lg:space-y-0"
+        >
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.08 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 lg:col-start-1 lg:row-start-1"
+          >
+            <h2 className="font-black text-sm uppercase text-slate-400 mb-3">
+              Itens do pedido
+            </h2>
+            <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+              {currentCart.map((item) => {
+                const preco = precoNoCarrinho(item.product, item.tamanho);
+                const rotulo = item.tamanho
+                  ? (ROTULOS_TAMANHO[item.tamanho] ?? item.tamanho)
+                  : "Preço fixo";
+                return (
+                  <div
+                    key={`${item.product.id}:${item.tamanho ?? ""}`}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-orange-600">
+                        {item.product.categoria}
+                      </span>
+                      <p className="truncate text-sm font-bold leading-tight text-slate-700">
+                        {item.quantity}x {item.product.nome}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                        {rotulo}
+                        {preco !== null && ` · R$ ${preco.toFixed(2)} / un`}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 pt-0.5 text-sm font-black whitespace-nowrap"
+                      aria-label={`Subtotal de ${item.product.nome} (${rotulo}): ${
+                        preco === null
+                          ? "preço a definir"
+                          : `R$ ${(preco * item.quantity).toFixed(2)}`
+                      }`}
+                    >
+                      {preco === null ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          A definir
+                        </span>
+                      ) : (
+                        `R$ ${(preco * item.quantity).toFixed(2)}`
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between font-black text-base">
+              <span>
+                Total
+                <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                  Informativo — recalculado pelo backend
+                </span>
+              </span>
+              <span className="text-orange-600">R$ {total.toFixed(2)}</span>
+            </div>
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.12 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 lg:col-start-1 lg:row-start-2"
+          >
+            <h2 className="font-black text-sm uppercase text-slate-400 mb-3 flex items-center justify-between">
+              Endereço de entrega
+              <span className="text-[10px] font-bold text-orange-600">
+                Obrigatório
+              </span>
+            </h2>
+            <input
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+              placeholder="Rua, número, bairro, complemento..."
+              aria-required="true"
+              className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm"
+            />
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.16 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 lg:col-start-1 lg:row-start-3"
+          >
+            <h2 className="font-black text-sm uppercase text-slate-400 mb-3 flex items-center justify-between">
+              Telefone de contato
+              <span className="text-[10px] font-bold text-orange-600">
+                Obrigatório
+              </span>
+            </h2>
+            <input
+              id="telefone-contato"
+              aria-label="Telefone de contato"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              placeholder="(11) 99999-9999"
+              maxLength={20}
+              aria-required="true"
+              className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm"
+            />
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.2 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 lg:col-start-2 lg:row-start-1 lg:row-span-2"
+          >
+            <h2 className="font-black text-sm uppercase text-slate-400 mb-3 flex items-center justify-between">
+              Forma de pagamento
+              <span className="text-[10px] font-bold text-orange-600">
+                Obrigatório
+              </span>
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              {formasPagamento.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setPagamento(f.value)}
+                  aria-pressed={pagamento === f.value}
+                  className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                    pagamento === f.value
+                      ? "border-orange-600 bg-orange-50 text-orange-700"
+                      : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {f.icon}
+                  <span className="truncate">{f.label}</span>
+                  {pagamento === f.value && (
+                    <Check className="w-4 h-4 ml-auto shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {pagamento === "DINHEIRO" && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-3">
+                    <label
+                      htmlFor="troco-para"
+                      className="text-xs font-bold text-slate-500 mb-1 block"
+                    >
+                      Troco para quanto?
+                      <span className="ml-2 text-orange-600">Obrigatório</span>
+                    </label>
+                    <input
+                      id="troco-para"
+                      value={troco}
+                      onChange={(e) => setTroco(e.target.value)}
+                      placeholder="R$ 0,00"
+                      type="text"
+                      inputMode="decimal"
+                      className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.24 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 lg:col-start-2 lg:row-start-3"
+          >
+            <h2 className="font-black text-sm uppercase text-slate-400 mb-3">
+              Observação
+            </h2>
+            <textarea
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              placeholder="Alguma observação? Ex: sem cebola, ponto da carne..."
+              rows={2}
+              className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm resize-none"
+            />
+          </motion.section>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium lg:col-start-2 lg:row-start-4"
+              >
+                <X className="w-4 h-4 shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            type="submit"
+            disabled={loading}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.28 }}
+            className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-100 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-2 lg:col-start-2 lg:row-start-5"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Finalizando...
+              </>
+            ) : (
+              `Finalizar Pedido • R$ ${total.toFixed(2)}`
+            )}
+          </motion.button>
+        </form>
+      </main>
+    </motion.div>
+  );
+}
