@@ -3,12 +3,15 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+ARG VITE_API_URL=https://deliver-backend-6ec9.onrender.com
+ENV VITE_API_URL=$VITE_API_URL
+
 # Copia os arquivos de configuração de pacotes e typescript
 COPY package*.json ./
 COPY tsconfig*.json ./
 
 # Instala as dependências
-RUN npm install
+RUN npm ci
 
 # Copia o restante dos arquivos do frontend
 COPY . .
