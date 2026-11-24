@@ -35,7 +35,7 @@ origins = list(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://deliver-frontend-.*\.vercel\.app",
+    allow_origin_regex=r"https://menuu-deliver\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
