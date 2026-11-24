@@ -32,12 +32,17 @@ No checkout, o backend consulta os preços oficiais e calcula o total. Assim, o 
 
 ## Arquitetura e stack
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, React Router, Zustand e Axios. React Hook Form e Zod apoiam os formulários.
-- **Backend:** Python, FastAPI, Pydantic e SQLAlchemy.
-- **Banco:** PostgreSQL, com alterações de estrutura controladas pelo Alembic.
-- **Autenticação:** tokens JWT e senhas protegidas com hash bcrypt.
-- **Infraestrutura:** Docker Compose para iniciar os serviços, Nginx para servir o frontend e Uvicorn para a API.
-- **E-mail:** SMTP para recuperação de senha.
+| Camada | Tecnologias | Para que servem |
+| --- | --- | --- |
+| **Interface** | React, TypeScript, Vite | Exibe o site e organiza a aplicação web. |
+| **Estilos e navegação** | Tailwind CSS, React Router | Define a aparência e as páginas do sistema. |
+| **Estado e formulários** | Zustand, React Hook Form, Zod | Mantém carrinho, sessão e preferências; auxilia na validação dos formulários. |
+| **Comunicação** | Axios, API REST | Conecta o frontend ao backend. |
+| **Backend** | Python, FastAPI, Pydantic | Implementa a API e valida os dados recebidos. |
+| **Banco de dados** | PostgreSQL, SQLAlchemy, Alembic | Armazena os dados, consulta as tabelas e gerencia alterações no banco. |
+| **Autenticação** | JWT, bcrypt | Controla sessões e protege senhas com hash. |
+| **Infraestrutura** | Docker Compose, Nginx, Uvicorn | Inicia os serviços, serve o site e executa a API. |
+| **E-mail** | SMTP | Envia mensagens para recuperação de senha. |
 
 O frontend organiza a interface em páginas e componentes; stores Zustand mantêm sessão, carrinho, tema e preferências. No backend, as rotas cuidam de autenticação, cardápio e pedidos, enquanto schemas validam os dados e modelos representam as tabelas.
 
