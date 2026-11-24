@@ -1,3 +1,7 @@
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![React](https://img.shields.io/badge/React-19-20232A?logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+
+[![Backend CI](https://github.com/JohnLouisMaker/deliver-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnLouisMaker/deliver-backend/actions/workflows/ci.yml) [![Frontend CI](https://github.com/JohnLouisMaker/deliver-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnLouisMaker/deliver-frontend/actions/workflows/ci.yml)
+
 # Menuu Deliver
 
 Aplicação web de delivery de comida. O cliente consulta o cardápio, monta um carrinho, cria uma conta e envia um pedido; a equipe administra os produtos pela API.
