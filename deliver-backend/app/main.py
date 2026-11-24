@@ -21,6 +21,7 @@ origins = [
     "http://localhost",
     "http://127.0.0.1",
     "https://deliver-frontend-three.vercel.app",
+    "https://menuu-deliver.pages.dev",
 ]
 
 # CONFIG CORS MIDDLEWARE
