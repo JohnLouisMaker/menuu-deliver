@@ -2,7 +2,7 @@ import axios from "axios";
 import useAuthStore from "../store/authStore";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://deliver-backend-6ec9.onrender.com";
+  import.meta.env.VITE_API_URL || "https://menuu-deliver.onrender.com";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
