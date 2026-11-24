@@ -93,7 +93,7 @@ export default function HomePage() {
   }, [cartCurrentOpen]);
 
   const API_URL =
-    import.meta.env.VITE_API_URL || "https://deliver-backend-6ec9.onrender.com";
+    import.meta.env.VITE_API_URL || "https://menuu-deliver.onrender.com";
 
   const getImageUrl = (path: string) => {
     if (!path || path.startsWith("http://") || path.startsWith("https://"))
