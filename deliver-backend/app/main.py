@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,16 +15,21 @@ from app.routes.product_routes import product_router
 
 app = FastAPI(title="API Python com FastAPI")
 
-# Lista de origens fixas (como localhost)
-origins = [
+# Origens locais e produção por padrão. Outras origens podem ser adicionadas
+# separadas por vírgula na variável CORS_ORIGINS no Render.
+default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://localhost",
     "http://127.0.0.1",
-    "https://deliver-frontend-three.vercel.app",
     "https://menuu-deliver.pages.dev",
 ]
+
+configured_origins = os.getenv("CORS_ORIGINS", "")
+origins = list(
+    dict.fromkeys(default_origins + [origin.strip() for origin in configured_origins.split(",") if origin.strip()])
+)
 
 # CONFIG CORS MIDDLEWARE
 app.add_middleware(
