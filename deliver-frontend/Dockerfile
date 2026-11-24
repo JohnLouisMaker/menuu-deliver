@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-ARG VITE_API_URL=https://deliver-backend-6ec9.onrender.com
+ARG VITE_API_URL=https://menuu-deliver.onrender.com
 ENV VITE_API_URL=$VITE_API_URL
 
 # Copia os arquivos de configuração de pacotes e typescript
