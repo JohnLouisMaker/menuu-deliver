@@ -34,24 +34,24 @@ No checkout, o backend busca os preços oficiais no banco. O navegador não defi
 
 ## Stack
 
-| Categoria | Tecnologia |
-| --- | --- |
-| Interface | React 19 + TypeScript |
-| Build | Vite |
-| Estilização | Tailwind CSS |
-| Rotas | React Router DOM |
-| Estado global | Zustand |
-| Formulários | React Hook Form + Zod |
-| Requisições HTTP | Axios |
-| Animações e ícones | Motion + Lucide React |
-| API | Python + FastAPI |
-| Validação da API | Pydantic |
-| Banco de dados | PostgreSQL + SQLAlchemy |
-| Migrações | Alembic |
-| Autenticação | JWT + bcrypt |
-| E-mail | SMTP |
-| Execução | Docker Compose |
-| Servidores | Nginx + Uvicorn |
+| Categoria          | Tecnologia              |
+| ------------------ | ----------------------- |
+| Interface          | React 19 + TypeScript   |
+| Build              | Vite                    |
+| Estilização        | Tailwind CSS            |
+| Rotas              | React Router DOM        |
+| Estado global      | Zustand                 |
+| Formulários        | React Hook Form + Zod   |
+| Requisições HTTP   | Axios                   |
+| Animações e ícones | Motion + Lucide React   |
+| API                | Python + FastAPI        |
+| Validação da API   | Pydantic                |
+| Banco de dados     | PostgreSQL + SQLAlchemy |
+| Migrações          | Alembic                 |
+| Autenticação       | JWT + bcrypt            |
+| E-mail             | SMTP                    |
+| Execução           | Docker Compose          |
+| Servidores         | Nginx + Uvicorn         |
 
 ## Validações e segurança
 
@@ -109,4 +109,3 @@ O Compose aplica as migrações do banco ao iniciar o backend.
 
 - [ ] Histórico e detalhes de pedidos no frontend
 - [ ] Acompanhamento do status dos pedidos
-
