@@ -46,16 +46,9 @@ export default function App() {
         <Route path={ROTAS.login} element={<LoginPage />} />
         <Route path={ROTAS.cadastro} element={<SignUpPage />} />
         <Route path={ROTAS.recuperarSenha} element={<RecoverPasswordPage />} />
+        <Route path={ROTAS.cardapio} element={<HomePage />} />
 
         {/* --- ROTAS PROTEGIDAS --- */}
-        <Route
-          path={ROTAS.cardapio}
-          element={
-            <ProtectedRoute>
-              <HomePage />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path={ROTAS.checkout}
           element={
