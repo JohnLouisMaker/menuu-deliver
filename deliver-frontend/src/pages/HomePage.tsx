@@ -215,52 +215,65 @@ export default function HomePage() {
                 )}
               </AnimatePresence>
             </div>
-            {/* Perfil do usuário */}
+            {/* Perfil do usuário ou botão de entrar */}
             <div ref={userRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setModalUser((open) => !open)}
-                aria-expanded={modalUser}
-                aria-haspopup="dialog"
-                aria-controls="profile-modal"
-                className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white p-1 transition-colors hover:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:pr-4 dark:border-slate-700 dark:bg-slate-900"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 font-bold text-white uppercase">
-                  {user?.nome?.charAt(0) || <User className="h-5 w-5" />}
-                </div>
-                <span className="hidden text-sm font-bold text-slate-700 sm:inline dark:text-slate-200">
-                  {user?.nome?.split(" ")[0] || "Perfil"}
-                </span>
-              </button>
-
-              <AnimatePresence>
-                {modalUser && (
-                  <motion.div
-                    role="dialog"
-                    aria-label="Opções do perfil"
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute right-0 z-50 mt-3 hidden w-80 rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl lg:block dark:border-slate-800 dark:bg-slate-900"
-                    onClick={(event) => event.stopPropagation()}
+              {user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setModalUser((open) => !open)}
+                    aria-expanded={modalUser}
+                    aria-haspopup="dialog"
+                    aria-controls="profile-modal"
+                    className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white p-1 transition-colors hover:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:pr-4 dark:border-slate-700 dark:bg-slate-900"
                   >
-                    <ProfilePanel
-                      user={user}
-                      onClose={() => setModalUser(false)}
-                      onEdit={() => {
-                        setModalUser(false);
-                        navigate(`${ROTAS.perfil}#perfil`);
-                      }}
-                      onSettings={() => {
-                        setModalUser(false);
-                        navigate(`${ROTAS.perfil}#aparencia`);
-                      }}
-                      onLogout={encerrarSessao}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 font-bold text-white uppercase">
+                      {user.nome?.charAt(0) || <User className="h-5 w-5" />}
+                    </div>
+                    <span className="hidden text-sm font-bold text-slate-700 sm:inline dark:text-slate-200">
+                      {user.nome?.split(" ")[0] || "Perfil"}
+                    </span>
+                  </button>
+
+                  <AnimatePresence>
+                    {modalUser && (
+                      <motion.div
+                        role="dialog"
+                        aria-label="Opções do perfil"
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 z-50 mt-3 hidden w-80 rounded-3xl border border-slate-100 bg-white p-5 shadow-2xl lg:block dark:border-slate-800 dark:bg-slate-900"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <ProfilePanel
+                          user={user}
+                          onClose={() => setModalUser(false)}
+                          onEdit={() => {
+                            setModalUser(false);
+                            navigate(`${ROTAS.perfil}#perfil`);
+                          }}
+                          onSettings={() => {
+                            setModalUser(false);
+                            navigate(`${ROTAS.perfil}#aparencia`);
+                          }}
+                          onLogout={encerrarSessao}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate(ROTAS.login)}
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-colors hover:border-orange-300 hover:text-orange-600 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <User className="h-4 w-4 text-orange-600" />
+                  <span className="text-xs sm:text-sm font-bold">Entrar</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -268,7 +281,7 @@ export default function HomePage() {
 
       {/* Perfil Mobile */}
       <AnimatePresence>
-        {modalUser && (
+        {user && modalUser && (
           <motion.div
             className="fixed inset-0 z-50 lg:hidden"
             initial={{ opacity: 0 }}

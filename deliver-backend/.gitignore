@@ -40,3 +40,5 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+AGENTS.md

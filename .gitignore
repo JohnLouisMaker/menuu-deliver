@@ -13,3 +13,16 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 *.log
+
+# Arquivos locais de agentes e contexto
+PRODUCT.md
+AGENT.md
+AGENTS.md
+DESIGN.md
+GLOSSARY-MAP.md
+deliver-frontend/GLOSSARY.md
+deliver-backend/GLOSSARY.md
+docs/agents/
+docs/adr/
+.scratch/
+.impeccable/
